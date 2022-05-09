@@ -1,0 +1,180 @@
+@startuml "Start_task"
+participant "Keypad" as keypad
+participant "Start task" as thread
+participant "Door events" as door
+participant "Garage events" as garage
+participant "Curtain events" as curtains
+participant "Light events" as lights
+participant "Temperature events" as temp
+
+keypad -> thread: Gets start signal
+thread -> door: Issue close event
+thread -> garage: Issue start event
+thread -> curtains: Issue open event
+thread -> lights: Issue off event
+thread -> temp: Issue on event
+@enduml
+
+@startuml "End_task"
+participant "Keypad" as keypad
+participant "End task" as thread
+participant "Door events" as door
+participant "Garage events" as garage
+participant "Curtain events" as curtains
+participant "Light events" as lights
+participant "Temperature events" as temp
+
+keypad -> thread: Gets end signal
+thread -> door: Issue close event
+thread -> garage: Issue end event
+thread -> curtains: Issue open event
+thread -> lights: Issue off event
+thread -> temp: Issue off event
+
+@enduml
+
+@startuml "Light_task"
+participant "Photo resistor" as sensor
+participant "Interrupts" as nvic
+participant "Light task" as thread
+participant "Curtain events" as curtains
+
+sensor -> nvic: Raise completed\ninterrupt when value\nis out of range
+nvic -> nvic: Check if value is\nover or under and\nset proper flag
+nvic -> thread: Wake up thread
+thread -> thread: Check set flag
+alt Is it over range?
+    thread -> thread: Turn off lights
+    thread -> curtains: Issue open event
+else 
+    thread -> thread: Turn on lights
+    thread -> curtains: Issue close event
+end
+@enduml
+
+@startuml "Temp_task"
+
+participant "Temperature sensor" as sensor
+participant "Interrupts" as nvic
+participant "Temperature task" as thread
+participant "Light events" as lights
+participant "Garage events" as garage
+participant "Fan events" as fan
+
+sensor -> nvic: Raise interrupt
+nvic -> thread: Wake up task
+alt is temperature in range?
+    thread -> thread: Turn fan off
+    thread -> thread: Turn heater off
+    thread -> garage: Issue close garage
+    thread -> lights: Issue green\nLED on event
+else
+    alt is it under range?
+        thread -> thread: Turn heater on
+        thread -> thread: Turn fan off
+        thread -> lights: Issue red\nLED on event
+    else 
+        thread -> thread: Turn heater off
+        thread -> garage: Issue open garage
+        thread -> thread: Turn fan on
+        thread -> lights: Issue blue\nLED on event
+    end
+end
+
+@enduml
+
+@startuml "Garage_task"
+actor "Car" as car
+participant "Hall sensor" as sensor
+participant "Interrupts" as nvic
+participant "Garage task" as thread
+participant "Light events" as lights
+participant "Timer" as lpt
+
+== Car entering ==
+car -> sensor: Arrives over sensor
+sensor -> nvic: Produces interrupt
+nvic -> thread: Wakes up thread
+thread -> thread: Opens door
+thread -> lights: Issues garage\nlight event
+thread -> thread: Wait for\ncar to leave
+
+== Car leaving ==
+car -> sensor: Leaves sensor area
+sensor -> nvic: Produces interrupt
+nvic -> thread: Wakes up thread
+thread -> lpt: Sets timer for 2 seconds
+thread -> thread: Waits timer wakeup
+lpt -> nvic: Produces interrupt
+nvic -> thread: Wakes up\nwith timer event
+thread -> thread: Closes garage door
+thread -> lights: Issues garage\nlight event
+
+== Other events ==
+thread -> thread: Wakes afer event
+thread -> thread: Check raised event
+alt Is open garage door event?
+    thread -> sensor: Check sensor status
+    alt Is car present?
+        thread -> thread: do not open
+    else 
+        thread -> thread: open garage
+    end
+else Is close garage door event?
+    thread -> thread: close garage
+end
+@enduml
+
+@startuml "Door_task"
+participant "User" as user
+participant "Keypad task" as keypad
+participant "Door access task" as thread
+participant "Timer" as lpt
+
+user -> keypad: Selects bell option
+keypad -> thread: Issues bell option\nto queue
+loop waiting digit
+    thread -> keypad: Waits for digit\nfrom queue with\n10 seconds timeout
+end
+
+alt entered complete code?
+    alt more than 3 tries?
+        thread -> thread: trigger alarm
+        thread -> lpt: Configure 5 seconds
+        ...\t\t\t\t\t\t\t\t\t\tafter 5 seconds ...
+        lpt -> thread: Wake thread
+        thread -> thread: Turn off alarm
+        thread -> thread: Return to first state
+    else
+        thread -> thread: Compare with\nconfigured code
+        alt is the code correct?
+            thread -> thread: Open door
+            thread -> lpt: Configure for 6 seconds
+            ...\t\t\t\t\t\t\t\t\t\tafter 6 seconds...
+            thread -> thread: Close door
+        else
+            thread -> thread: show error message
+            thread -> thread: back to wait for digits
+        end
+    end
+else
+    thread -> thread: Display timeout error
+end
+@enduml
+
+@startuml "FireSafety_task"
+participant "Timer" as lpt
+participant "Interrupts" as nvic
+participant "Temp sensor" as adc
+participant "Fire checker" as life
+
+lpt -> nvic: Trigger interrupt
+nvic -> adc: Starts check
+adc -> nvic: Triggers complete interrupt
+nvic -> life: Wakes up thread
+alt Is sensor present?
+    life -> life: Continue
+else
+    life -> life: Issue turn\noff of plate
+end
+@enduml
