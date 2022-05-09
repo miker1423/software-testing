@@ -166,7 +166,7 @@ end
 participant "Timer" as lpt
 participant "Interrupts" as nvic
 participant "Temp sensor" as adc
-participant "Fire checker" as life
+participant "Fire checker task" as life
 
 lpt -> nvic: Trigger interrupt
 nvic -> adc: Starts check

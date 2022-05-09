@@ -1,0 +1,76 @@
+@startuml "Event_flags"
+() "Start task" as start_task
+() "End task" as end_task
+
+interface "Light sensor interrupt" as light_int
+() "Light task" as light_task
+entity "Light events" as light_event
+
+interface "Temperature sensor interrupt" as temp_int
+() "Temperature task" as temp_task
+entity "Temperature events" as temp_event
+
+interface "Garage sensor interrupt" as garage_int
+() "Garage task" as garage_task
+entity "Garage events" as garage_event
+
+() "Door access task" as door_task
+entity "Door events" as door_event
+
+() "Fire checker task" as fire_task
+entity "Fire checker events" as fire_event
+
+() "Curtain task" as curatin_task
+entity "Curtain events" as curtain_event
+
+() "Fan task" as fan_task
+entity "Fan events" as fan_event
+
+() "Keypad task" as keypad_task
+
+start_task -> light_event
+start_task -> garage_event
+start_task -> door_event
+start_task -> curtain_event
+start_task -> temp_event
+
+end_task -> light_event
+end_task -> garage_event
+end_task -> door_event
+end_task -> curtain_event
+end_task -> temp_event
+
+light_int -> light_event
+light_event --> light_task
+light_int -> curtain_event
+
+garage_int -> garage_event
+garage_event --> garage_task
+garage_task -> light_event
+
+temp_int -> temp_event
+temp_event --> temp_task
+temp_task -> garage_event
+temp_task -> light_event
+temp_task -> fan_event
+
+fan_event --> fan_task
+curtain_event -> curatin_task
+
+keypad_task -> door_event
+keypad_task --> start_task
+keypad_task --> end_task
+
+door_event --> door_task
+
+
+fire_event --> fire_task
+
+note as N1
+Interfaces represent Interrtups.
+Circles represent tasks
+Entities represent EventGroups.
+end note
+
+
+@enduml
